@@ -1,0 +1,20 @@
+name: CI Test Pipeline
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run tests (Intentional Failure)
+        run: |
+          echo "Running unit tests..."
+          echo "Error: Connection refused to database."
+          echo "FAIL: 1 tests failed, 0 passed."
+          exit 1

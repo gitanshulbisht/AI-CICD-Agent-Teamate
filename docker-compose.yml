@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  n8n:
+    build:
+      context: .
+      dockerfile: Dockerfile.n8n
+    container_name: cicd_agent_n8n
+    restart: unless-stopped
+    ports:
+      - "5679:5678"
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://localhost:5679/
+      - GENERIC_TIMEZONE=UTC
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-admin}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GH_REPO=${GH_REPO}
+      - ARGOCD_SERVER=${ARGOCD_SERVER}
+      - ARGOCD_AUTH_TOKEN=${ARGOCD_AUTH_TOKEN}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  n8n_data:

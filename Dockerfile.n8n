@@ -1,0 +1,14 @@
+FROM n8nio/n8n:1.123.55
+
+USER root
+
+# Install GitHub CLI (gh)
+RUN wget -qO- https://github.com/cli/cli/releases/download/v2.49.0/gh_2.49.0_linux_amd64.tar.gz | tar xz && \
+    mv gh_2.49.0_linux_amd64/bin/gh /usr/local/bin/ && \
+    rm -rf gh_2.49.0_linux_amd64
+
+# Install ArgoCD CLI
+RUN wget -qO /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64 && \
+    chmod +x /usr/local/bin/argocd
+
+USER node
