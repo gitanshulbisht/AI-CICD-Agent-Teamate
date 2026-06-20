@@ -6,33 +6,28 @@
       "id": "trigger",
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
-      "typeVersion": 1,
-      "position": [
-        0,
-        0
-      ]
+      "typeVersion": 1.1,
+      "position": [0, 0]
     },
     {
       "parameters": {
-        "command": "gh run list --status failure --limit 10 --json name,headBranch,status,conclusion,databaseId"
+        "jsCode": "\nconst { execSync } = require('child_process');\ntry {\n  const stdout = execSync(\n    'gh run list --status failure --limit 10 --json name,headBranch,status,conclusion,databaseId',\n    { encoding: 'utf8', timeout: 30000 }\n  );\n  return [{ json: { stdout: stdout || '[]', stderr: '' } }];\n} catch(e) {\n  return [{ json: { stdout: e.stdout || '', stderr: e.stderr || e.message } }];\n}\n"
       },
       "id": "execute",
-      "name": "Execute Command",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        220,
-        0
-      ]
+      "name": "Github get failed runs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [224, 0]
     },
     {
       "parameters": {
-        "keepOnlySet": true,
-        "values": {
-          "string": [
+        "assignments": {
+          "assignments": [
             {
+              "id": "94e0f922-4606-4fe6-91a9-b544c16034c1",
               "name": "result",
-              "value": "={{ $json.stdout || $json.stderr }}"
+              "value": "={{ $json.stdout || $json.stderr }}",
+              "type": "string"
             }
           ]
         },
@@ -42,33 +37,18 @@
       "name": "Set Output",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [
-        440,
-        0
-      ]
+      "position": [448, 0]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
       "main": [
-        [
-          {
-            "node": "Execute Command",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Github get failed runs", "type": "main", "index": 0 }]
       ]
     },
-    "Execute Command": {
+    "Github get failed runs": {
       "main": [
-        [
-          {
-            "node": "Set Output",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Set Output", "type": "main", "index": 0 }]
       ]
     }
   },
