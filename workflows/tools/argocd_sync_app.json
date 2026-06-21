@@ -3,74 +3,41 @@
   "nodes": [
     {
       "parameters": {},
-      "id": "trigger",
+      "id": "trigger-2",
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [
-        0,
-        0
-      ]
+      "position": [0, 0]
     },
     {
       "parameters": {
-        "command": "argocd app sync {{{{ $json.app_name || '' }}}}"
+        "jsCode": "\nconst { execSync } = require('child_process');\nconst data = $input.item.json;\nconst val = (data.query && data.query.app_name) ? data.query.app_name : data.app_name;\nif (!val) { return [{ json: { stdout: '', stderr: 'No app_name provided. Got: ' + JSON.stringify(data) } }]; }\ntry {\n  const cmd = 'argocd app sync ' + val + ' --server host.docker.internal:8080 --insecure';\n  const stdout = execSync(cmd, { encoding: 'utf8', timeout: 60000 });\n  return [{ json: { stdout: stdout || 'Done.', stderr: '' } }];\n} catch(e) {\n  return [{ json: { stdout: e.stdout || '', stderr: e.stderr || e.message } }];\n}\n"
       },
-      "id": "execute",
-      "name": "Execute Command",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        220,
-        0
-      ]
+      "id": "code-2",
+      "name": "Argo CD Sync App",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [224, 0]
     },
     {
       "parameters": {
-        "keepOnlySet": true,
-        "values": {
-          "string": [
-            {
-              "name": "result",
-              "value": "={{ $json.stdout || $json.stderr }}"
-            }
+        "assignments": {
+          "assignments": [
+            { "id": "assign-2", "name": "result", "value": "={{ $json.stdout || $json.stderr }}", "type": "string" }
           ]
         },
         "options": {}
       },
-      "id": "set",
+      "id": "set-2",
       "name": "Set Output",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [
-        440,
-        0
-      ]
+      "position": [448, 0]
     }
   ],
   "connections": {
-    "Execute Workflow Trigger": {
-      "main": [
-        [
-          {
-            "node": "Execute Command",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Execute Command": {
-      "main": [
-        [
-          {
-            "node": "Set Output",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
+    "Execute Workflow Trigger": { "main": [[{ "node": "Argo CD Sync App", "type": "main", "index": 0 }]] },
+    "Argo CD Sync App": { "main": [[{ "node": "Set Output", "type": "main", "index": 0 }]] }
   },
   "settings": {}
 }
