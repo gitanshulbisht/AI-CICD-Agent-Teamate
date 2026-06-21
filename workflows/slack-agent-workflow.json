@@ -1,0 +1,350 @@
+{
+  "name": "Slack CI/CD Agent Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "events": [
+          "message"
+        ]
+      },
+      "id": "slack-trigger",
+      "name": "Slack Trigger",
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are a Principal DevOps and Release Engineer AI Agent.\nYou interact with users via Slack to diagnose CI/CD failures and deploy applications.\n\n# Available Tools\n| Tool Name | Description |\n|---|---|\n| github_get_failed_runs | Lists recent failed GitHub Action runs |\n| github_get_run_logs | Fetches the logs for a specific failed run ID |\n| github_trigger_rebuild | Triggers a rebuild of a GitHub Action run |\n| argocd_app_status | Gets the current status of an ArgoCD application |\n| argocd_sync_app | Syncs/deploys an ArgoCD application |\n| argocd_app_history | Fetches deployment history of an ArgoCD app |\n\n**CRITICAL SAFETY RULE:**\nFor any WRITE operation (specifically `github_trigger_rebuild` and `argocd_sync_app`), you MUST explain the exact impact of the action to the user and ask for their explicit confirmation before executing the tool. Do NOT execute these tools without the user saying \"Yes\" or \"Proceed\".\n"
+        }
+      },
+      "id": "ai-agent",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        250,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channelId": "={{ $('Slack Trigger').item.json.event.channel }}",
+        "text": "={{ $json.output }}",
+        "otherOptions": {}
+      },
+      "id": "slack-reply",
+      "name": "Slack Reply",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [
+        550,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/chat-bison",
+        "options": {
+          "baseURL": "https://openrouter.ai/api"
+        }
+      },
+      "id": "llm",
+      "name": "OpenRouter LLM",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        250,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "windowSize": 10
+      },
+      "id": "memory",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [
+        350,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "id"
+        },
+        "name": "github_get_failed_runs",
+        "description": "Lists failed runs",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_id": "={{ $fromAI('run_id') }}",
+            "app_name": "={{ $fromAI('app_name') }}"
+          }
+        }
+      },
+      "id": "tool-github_get_failed_runs",
+      "name": "Tool: github_get_failed_runs",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        550,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "id"
+        },
+        "name": "github_get_run_logs",
+        "description": "Gets logs. Needs run_id",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_id": "={{ $fromAI('run_id') }}",
+            "app_name": "={{ $fromAI('app_name') }}"
+          }
+        }
+      },
+      "id": "tool-github_get_run_logs",
+      "name": "Tool: github_get_run_logs",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        700,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "id"
+        },
+        "name": "github_trigger_rebuild",
+        "description": "Rebuilds run. Needs run_id",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_id": "={{ $fromAI('run_id') }}",
+            "app_name": "={{ $fromAI('app_name') }}"
+          }
+        }
+      },
+      "id": "tool-github_trigger_rebuild",
+      "name": "Tool: github_trigger_rebuild",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        850,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "id"
+        },
+        "name": "argocd_app_status",
+        "description": "Gets app status. Needs app_name",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_id": "={{ $fromAI('run_id') }}",
+            "app_name": "={{ $fromAI('app_name') }}"
+          }
+        }
+      },
+      "id": "tool-argocd_app_status",
+      "name": "Tool: argocd_app_status",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1000,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "id"
+        },
+        "name": "argocd_sync_app",
+        "description": "Syncs app. Needs app_name",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_id": "={{ $fromAI('run_id') }}",
+            "app_name": "={{ $fromAI('app_name') }}"
+          }
+        }
+      },
+      "id": "tool-argocd_sync_app",
+      "name": "Tool: argocd_sync_app",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1150,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "id"
+        },
+        "name": "argocd_app_history",
+        "description": "Gets app history. Needs app_name",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_id": "={{ $fromAI('run_id') }}",
+            "app_name": "={{ $fromAI('app_name') }}"
+          }
+        }
+      },
+      "id": "tool-argocd_app_history",
+      "name": "Tool: argocd_app_history",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1300,
+        450
+      ]
+    }
+  ],
+  "connections": {
+    "Slack Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Slack Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter LLM": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: github_get_failed_runs": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: github_get_run_logs": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: github_trigger_rebuild": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: argocd_app_status": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: argocd_sync_app": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: argocd_app_history": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

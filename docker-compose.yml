@@ -14,7 +14,7 @@ services:
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
       - NODE_ENV=production
-      - WEBHOOK_URL=http://localhost:5679/
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5679/}
       - GENERIC_TIMEZONE=UTC
       - N8N_BASIC_AUTH_USER=admin
       - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-admin}
@@ -24,6 +24,7 @@ services:
       - ARGOCD_AUTH_TOKEN=${ARGOCD_AUTH_TOKEN}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - NODE_FUNCTION_ALLOW_BUILTIN=child_process
     volumes:
       - n8n_data:/home/node/.n8n
 

@@ -7,23 +7,17 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [
-        0,
-        0
-      ]
+      "position": [0, 0]
     },
     {
       "parameters": {
-        "command": "gh run view {{{{ $json.run_id || '' }}}} --log-failed | tail -n 200"
+        "jsCode": "\nconst { execSync } = require('child_process');\nconst data = $input.item.json;\nconst val = (data.query && data.query.run_id) ? data.query.run_id : data.run_id;\nif (!val) { return [{ json: { stdout: '', stderr: 'No run_id provided. Got: ' + JSON.stringify(data) } }]; }\ntry {\n  const cmd = 'gh run view ' + val + ' --log-failed | tail -n 200';\n  const stdout = execSync(cmd, { encoding: 'utf8', timeout: 30000 });\n  return [{ json: { stdout: stdout || 'Done.', stderr: '' } }];\n} catch(e) {\n  return [{ json: { stdout: e.stdout || '', stderr: e.stderr || e.message } }];\n}\n"
       },
       "id": "execute",
-      "name": "Execute Command",
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
-      "position": [
-        220,
-        0
-      ]
+      "name": "Github Get Run Logs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
     },
     {
       "parameters": {
@@ -42,10 +36,7 @@
       "name": "Set Output",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [
-        440,
-        0
-      ]
+      "position": [440, 0]
     }
   ],
   "connections": {
@@ -53,14 +44,14 @@
       "main": [
         [
           {
-            "node": "Execute Command",
+            "node": "Github Get Run Logs",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Execute Command": {
+    "Github Get Run Logs": {
       "main": [
         [
           {
