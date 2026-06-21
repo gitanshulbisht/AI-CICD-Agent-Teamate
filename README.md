@@ -85,13 +85,16 @@ Each "tool" is a **separate n8n sub-workflow** that gets called by the agent. Th
 
 ## Agent Capabilities
 
-### GitHub Actions Tools
+### GitHub Actions & PR Tools
 
 | Tool | Description |
 |---|---|
 | `github_get_failed_runs` | Lists the last 10 failed GitHub Actions runs with branch, status, and run ID |
 | `github_get_run_logs` | Fetches the failure logs for a specific run ID (last 200 lines) |
 | `github_trigger_rebuild` | Re-runs a specific failed GitHub Actions run |
+| `github_list_open_prs` | Lists open pull requests awaiting review |
+| `github_merge_pr` | Merges a specific PR (default: squash strategy) |
+| `github_create_issue` | Creates a new GitHub issue with title and body |
 
 ### ArgoCD Tools
 
@@ -100,6 +103,8 @@ Each "tool" is a **separate n8n sub-workflow** that gets called by the agent. Th
 | `argocd_app_status` | Gets the current health and sync status of an ArgoCD application |
 | `argocd_sync_app` | Triggers a sync/deployment of an ArgoCD application |
 | `argocd_app_history` | Fetches the deployment history of an ArgoCD application |
+| `argocd_rollback_app` | Rolls back an application to its previous deployed state |
+| `argocd_list_apps` | Lists all applications managed by ArgoCD |
 
 ---
 
@@ -318,9 +323,14 @@ Go to **Workflows → Import from File** for each:
 - `workflows/tools/github_get_failed_runs.json`
 - `workflows/tools/github_get_run_logs.json`
 - `workflows/tools/github_trigger_rebuild.json`
+- `workflows/tools/github_list_open_prs.json`
+- `workflows/tools/github_merge_pr.json`
+- `workflows/tools/github_create_issue.json`
 - `workflows/tools/argocd_app_status.json`
 - `workflows/tools/argocd_sync_app.json`
 - `workflows/tools/argocd_app_history.json`
+- `workflows/tools/argocd_rollback_app.json`
+- `workflows/tools/argocd_list_apps.json`
 
 #### Import Agent Workflows (import ONE based on your chat platform):
 - `workflows/slack-agent-workflow.json` — for Slack
@@ -448,34 +458,55 @@ The agent uses **Window Buffer Memory** with a `sessionKey` of `={{ $('Slack Tri
 
 ### `github_get_failed_runs`
 **Command:** `gh run list --status failure --limit 10 --json name,headBranch,status,conclusion,databaseId`  
-**Returns:** JSON array of last 10 failed runs with names, branches, and IDs.
+**Returns:** JSON array of last 10 failed runs.
 
 ### `github_get_run_logs`
-**Input:** `run_id` (GitHub Actions run ID, e.g., `27850514146`)  
+**Input:** `run_id` (e.g., `27850514146`)  
 **Command:** `gh run view <run_id> --log-failed | tail -n 200`  
-**Returns:** Last 200 lines of failure logs for the specified run.
+**Returns:** Last 200 lines of failure logs.
 
 ### `github_trigger_rebuild`
 **Input:** `run_id`  
-**Command:** `gh run rerun <run_id>` (executed via JavaScript Code node)  
-**Returns:** Confirmation message or error.  
-**⚠️ WRITE OPERATION** — Requires user confirmation before the agent will execute.
+**Command:** `gh run rerun <run_id>`  
+**⚠️ WRITE OPERATION** — Requires user confirmation.
+
+### `github_list_open_prs`
+**Command:** `gh pr list --state open --json number,title,author,url`  
+**Returns:** Open PRs waiting for review.
+
+### `github_merge_pr`
+**Input:** `pr_number`  
+**Command:** `gh pr merge <pr_number> --squash --delete-branch`  
+**⚠️ WRITE OPERATION** — Requires user confirmation.
+
+### `github_create_issue`
+**Input:** `title`, `body`  
+**Command:** `gh issue create --title "<title>" --body-file -`  
+**Returns:** URL of newly created issue.
 
 ### `argocd_app_status`
-**Input:** `app_name` (ArgoCD application name)  
+**Input:** `app_name`  
 **Command:** `argocd app get <app_name> --output json --server host.docker.internal:8080 --insecure`  
-**Returns:** Full application health and sync status as JSON.
+**Returns:** Full health and sync status as JSON.
 
 ### `argocd_sync_app`
 **Input:** `app_name`  
 **Command:** `argocd app sync <app_name> --server host.docker.internal:8080 --insecure`  
-**Returns:** Sync operation output.  
-**⚠️ WRITE OPERATION** — Requires user confirmation before the agent will execute.
+**⚠️ WRITE OPERATION** — Requires user confirmation.
 
 ### `argocd_app_history`
 **Input:** `app_name`  
 **Command:** `argocd app history <app_name> --server host.docker.internal:8080 --insecure`  
 **Returns:** Deployment history table.
+
+### `argocd_rollback_app`
+**Input:** `app_name`  
+**Command:** `argocd app rollback <app_name> --server host.docker.internal:8080 --insecure`  
+**⚠️ WRITE OPERATION** — Requires user confirmation.
+
+### `argocd_list_apps`
+**Command:** `argocd app list -o json --server host.docker.internal:8080 --insecure`  
+**Returns:** JSON list of all deployed apps.
 
 ---
 
@@ -495,9 +526,14 @@ Chat Message Received
        ├── github_get_failed_runs  ──▶ [Sub-Workflow] ──▶ gh CLI
        ├── github_get_run_logs     ──▶ [Sub-Workflow] ──▶ gh CLI
        ├── github_trigger_rebuild  ──▶ [Sub-Workflow] ──▶ gh CLI
+       ├── github_list_open_prs    ──▶ [Sub-Workflow] ──▶ gh CLI
+       ├── github_merge_pr         ──▶ [Sub-Workflow] ──▶ gh CLI
+       ├── github_create_issue     ──▶ [Sub-Workflow] ──▶ gh CLI
        ├── argocd_app_status       ──▶ [Sub-Workflow] ──▶ argocd CLI
        ├── argocd_sync_app         ──▶ [Sub-Workflow] ──▶ argocd CLI
-       └── argocd_app_history      ──▶ [Sub-Workflow] ──▶ argocd CLI
+       ├── argocd_app_history      ──▶ [Sub-Workflow] ──▶ argocd CLI
+       ├── argocd_rollback_app     ──▶ [Sub-Workflow] ──▶ argocd CLI
+       └── argocd_list_apps        ──▶ [Sub-Workflow] ──▶ argocd CLI
         │
         ▼
    Reply sent back to chat channel
@@ -578,9 +614,14 @@ AI-CICD-Agent-Teamate/
 │       ├── github_get_failed_runs.json   # Tool: list failed GH Actions runs
 │       ├── github_get_run_logs.json      # Tool: get logs for a run
 │       ├── github_trigger_rebuild.json   # Tool: re-run a failed CI run
+│       ├── github_list_open_prs.json     # Tool: list open PRs
+│       ├── github_merge_pr.json          # Tool: merge a PR
+│       ├── github_create_issue.json      # Tool: create GH issue
 │       ├── argocd_app_status.json        # Tool: get ArgoCD app status
 │       ├── argocd_sync_app.json          # Tool: sync/deploy an ArgoCD app
-│       └── argocd_app_history.json       # Tool: get ArgoCD deployment history
+│       ├── argocd_app_history.json       # Tool: get ArgoCD deployment history
+│       ├── argocd_rollback_app.json      # Tool: rollback ArgoCD app
+│       └── argocd_list_apps.json         # Tool: list ArgoCD apps
 └── generate_workflows.py           # Script to regenerate tool workflow JSON files
 ```
 
