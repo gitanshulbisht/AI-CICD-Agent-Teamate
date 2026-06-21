@@ -194,9 +194,40 @@ The script will:
 
 **After the script completes:**
 
+> ⚠️ **Important:** A simple `kubectl port-forward` will frequently disconnect when your machine sleeps or the network changes. It is highly recommended to set up a persistent port-forwarding mechanism. 
+
+For macOS users, you can create a `LaunchAgent` to keep the port-forward running automatically:
+
 ```bash
-# In a NEW terminal — keep this running to expose the ArgoCD UI
-kubectl port-forward svc/argocd-server -n argocd 8080:443
+cat << 'EOF' > ~/Library/LaunchAgents/com.cicd-agent.argocd-portforward.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.cicd-agent.argocd-portforward</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/kubectl</string>
+        <string>port-forward</string>
+        <string>svc/argocd-server</string>
+        <string>-n</string>
+        <string>argocd</string>
+        <string>8080:443</string>
+        <string>--context</string>
+        <string>kind-cicd-agent-cluster</string>
+        <string>--address</string>
+        <string>0.0.0.0</string>
+    </array>
+    <key>KeepAlive</key>
+    <true/>
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>
+EOF
+
+launchctl load ~/Library/LaunchAgents/com.cicd-agent.argocd-portforward.plist
 ```
 
 Then open https://localhost:8080, log in with `admin` + the password printed by the script.
@@ -337,7 +368,7 @@ This is the most critical step. Each tool in the agent workflow must be linked t
 4. Repeat for all 6 tool nodes.
 5. Click **Save**.
 
-Additionally, for the **`github_trigger_rebuild`** tool workflow specifically — open it and ensure the Code node uses JavaScript (not the "Execute Command" node), which correctly handles the `run_id` variable:
+Additionally, for the tool workflows — ensure the Code nodes use JavaScript (not the "Execute Command" node) to prevent shell interpolation issues with template expressions. For example, `github_trigger_rebuild` correctly handles the `run_id` variable in JS:
 
 ```javascript
 const { execSync } = require('child_process');
@@ -432,18 +463,18 @@ The agent uses **Window Buffer Memory** with a `sessionKey` of `={{ $('Slack Tri
 
 ### `argocd_app_status`
 **Input:** `app_name` (ArgoCD application name)  
-**Command:** `argocd app get <app_name> --output json`  
+**Command:** `argocd app get <app_name> --output json --server host.docker.internal:8080 --insecure`  
 **Returns:** Full application health and sync status as JSON.
 
 ### `argocd_sync_app`
 **Input:** `app_name`  
-**Command:** `argocd app sync <app_name>`  
+**Command:** `argocd app sync <app_name> --server host.docker.internal:8080 --insecure`  
 **Returns:** Sync operation output.  
 **⚠️ WRITE OPERATION** — Requires user confirmation before the agent will execute.
 
 ### `argocd_app_history`
 **Input:** `app_name`  
-**Command:** `argocd app history <app_name>`  
+**Command:** `argocd app history <app_name> --server host.docker.internal:8080 --insecure`  
 **Returns:** Deployment history table.
 
 ---
@@ -505,6 +536,12 @@ argocd login localhost:8080 --username admin --password <password> --insecure
 argocd account generate-token --account admin
 # Paste the new token in .env, then: docker compose restart n8n
 ```
+
+### ArgoCD Tools fail with "connection refused" or "TLS certificate mismatch"
+1. **Connection Refused:** Ensure your `kubectl port-forward` is running and listening on `0.0.0.0`. If you didn't set up the LaunchAgent in Step 2, run:
+   `kubectl port-forward svc/argocd-server -n argocd 8080:443 --context kind-cicd-agent-cluster --address 0.0.0.0`
+   If the port-forward keeps dying, check if the `argocd-server` pod is in `CrashLoopBackOff` (often caused by stuck pre-upgrade jobs in Helm). You can fix the pod crash loop by running `kubectl delete pod -l app.kubernetes.io/name=argocd-server -n argocd --force`.
+2. **TLS Mismatch:** Ensure your ArgoCD tools (`argocd_app_status`, etc.) include `--server host.docker.internal:8080 --insecure` in the command execution node to bypass strict TLS checks against the local docker network.
 
 ### Slack events not arriving
 1. Verify Cloudflare Tunnel is running: `cloudflared tunnel --url http://localhost:5679`
