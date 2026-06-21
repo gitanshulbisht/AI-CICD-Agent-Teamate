@@ -232,6 +232,86 @@
         1300,
         450
       ]
+    },
+    {
+      "parameters": {
+        "name": "argocd_rollback_app",
+        "description": "Rollback an ArgoCD application to its previous deployed state. Input should be a JSON with 'app_name'. Call this when a user wants to revert an application. WARNING: Requires explicit user confirmation first.",
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"app_name\": \"guestbook\"\n}"
+      },
+      "id": "tool-argocd-rollback",
+      "name": "Tool: argocd_rollback_app",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1520,
+        660
+      ]
+    },
+    {
+      "parameters": {
+        "name": "argocd_list_apps",
+        "description": "List all applications managed by ArgoCD. Requires no input. Call this when a user asks what applications are deployed.",
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{}"
+      },
+      "id": "tool-argocd-list",
+      "name": "Tool: argocd_list_apps",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1520,
+        860
+      ]
+    },
+    {
+      "parameters": {
+        "name": "github_list_open_prs",
+        "description": "Fetch a list of open pull requests in the repository. Requires no input.",
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{}"
+      },
+      "id": "tool-github-list-prs",
+      "name": "Tool: github_list_open_prs",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1520,
+        1060
+      ]
+    },
+    {
+      "parameters": {
+        "name": "github_merge_pr",
+        "description": "Merge an open pull request using the squash strategy. Input should be a JSON with 'pr_number' as a number. WARNING: Requires explicit user confirmation first.",
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"pr_number\": 42\n}"
+      },
+      "id": "tool-github-merge-pr",
+      "name": "Tool: github_merge_pr",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1520,
+        1260
+      ]
+    },
+    {
+      "parameters": {
+        "name": "github_create_issue",
+        "description": "Create a new GitHub issue in the repository. Input must be a JSON with 'title' and 'body'.",
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"title\": \"Login page 500 error\",\n  \"body\": \"The login page is returning 500 errors when users click submit.\"\n}"
+      },
+      "id": "tool-github-create-issue",
+      "name": "Tool: github_create_issue",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1520,
+        1460
+      ]
     }
   ],
   "connections": {
@@ -335,6 +415,61 @@
       ]
     },
     "Tool: argocd_app_history": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: argocd_rollback_app": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: argocd_list_apps": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: github_list_open_prs": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: github_merge_pr": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: github_create_issue": {
       "ai_tool": [
         [
           {

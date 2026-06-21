@@ -1,0 +1,43 @@
+{
+  "name": "github_create_issue",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-1",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst { execSync } = require('child_process');\nconst data = $input.item.json;\nconst title = (data.query && data.query.title) ? data.query.title : data.title;\nconst body = (data.query && data.query.body) ? data.query.body : (data.body || '');\nif (!title) { return [{ json: { stdout: '', stderr: 'No title provided.' } }]; }\ntry {\n  // Using echo and piping to handle multiline body safely, and avoiding raw quotes in CLI arguments\n  const safeTitle = title.replace(/'/g, \"'\\\\''\");\n  const safeBody = body.replace(/'/g, \"'\\\\''\");\n  const cmd = `echo '${safeBody}' | gh issue create --title '${safeTitle}' --body-file -`;\n  const stdout = execSync(cmd, { encoding: 'utf8', timeout: 30000 });\n  return [{ json: { stdout: stdout || 'Done.', stderr: '' } }];\n} catch(e) {\n  return [{ json: { stdout: e.stdout || '', stderr: e.stderr || e.message } }];\n}\n"
+      },
+      "id": "code-1",
+      "name": "Github Create Issue",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "assign-1", "name": "result", "value": "={{ $json.stdout || $json.stderr }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-1",
+      "name": "Set Output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [440, 0]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": { "main": [[{ "node": "Github Create Issue", "type": "main", "index": 0 }]] },
+    "Github Create Issue": { "main": [[{ "node": "Set Output", "type": "main", "index": 0 }]] }
+  },
+  "settings": {}
+}

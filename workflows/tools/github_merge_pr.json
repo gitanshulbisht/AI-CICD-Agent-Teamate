@@ -1,0 +1,43 @@
+{
+  "name": "github_merge_pr",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-1",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst { execSync } = require('child_process');\nconst data = $input.item.json;\nconst val = (data.query && data.query.pr_number) ? data.query.pr_number : data.pr_number;\nif (!val) { return [{ json: { stdout: '', stderr: 'No pr_number provided. Got: ' + JSON.stringify(data) } }]; }\ntry {\n  // Defaulting to squash and deleting branch upon merge\n  const cmd = 'gh pr merge ' + val + ' --squash --delete-branch';\n  const stdout = execSync(cmd, { encoding: 'utf8', timeout: 30000 });\n  return [{ json: { stdout: stdout || 'Done.', stderr: '' } }];\n} catch(e) {\n  return [{ json: { stdout: e.stdout || '', stderr: e.stderr || e.message } }];\n}\n"
+      },
+      "id": "code-1",
+      "name": "Github Merge PR",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "assign-1", "name": "result", "value": "={{ $json.stdout || $json.stderr }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-1",
+      "name": "Set Output",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [440, 0]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": { "main": [[{ "node": "Github Merge PR", "type": "main", "index": 0 }]] },
+    "Github Merge PR": { "main": [[{ "node": "Set Output", "type": "main", "index": 0 }]] }
+  },
+  "settings": {}
+}
